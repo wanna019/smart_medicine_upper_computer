@@ -31,6 +31,10 @@ import gatt
 import chardet
 
 
+Hrate_Service_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
+Hrate_Characteristics_UUID = '00002a38-0000-1000-8000-00805f9b34fb'
+Temperature_Service_UUID = 'bbb40a00-337f-4081-9a0b-10d0f09716d3'
+Temperature_Characteristics_UUID = 'bbb40b00-337f-4081-9a0b-10d0f09716d3'
 
 plot_i = 0
 ptr1 = 0
@@ -47,7 +51,7 @@ last_time=None
 
 class AnyDeviceManager(gatt.DeviceManager):
     def device_discovered(self, device):
-        if (device.alias()!=None)&(str(device.mac_address)[0:2] != str(device.alias().lower())[0:2]):
+        if (device.alias() is not None) & (str(device.mac_address)[0:2] != str(device.alias().lower())[0:2]):
             if device.mac_address not in list_ble["addr"]:
                 print("Discovered [%s] %s" % (device.mac_address, device.alias()))
                 list_ble["addr"].append(device.mac_address)
@@ -88,7 +92,8 @@ class AnyDevice(gatt.Device):
         super().services_resolved()
 
         print("[%s] Resolved services" % (self.mac_address))
-        for service in self.services:
+        for index,service in enumerate(self.services):
+            print(index);
             print("[%s]  Service [%s]" % (self.mac_address, service.uuid))
             uuid_list[str(service.uuid)]={}
             try:
@@ -109,10 +114,41 @@ class AnyDevice(gatt.Device):
                 else:
                     for descriptor in characteristic.descriptors:
                         print("[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
+
         print("Service/Characteristic输出结束")
         # print(uuid_list)
         global flag_Services_resolved_success
         flag_Services_resolved_success = True
+
+        '''
+        为每个通道建立监听
+        '''
+        for service in self.services:
+            Service_UUID = "'" + service.uuid + "'"
+            print(Service_UUID)
+            for characteristic in service.characteristics:
+                Characteristics_UUID = "'" + characteristic.uuid + "'"
+                print(Characteristics_UUID)
+            try:
+                Hrate_Service = next(
+                    s for s in self.services
+                    if s.uuid == Service_UUID.lower())
+                try:
+                    Hrate_Characteristics = next(
+                        c for c in Hrate_Service.characteristics
+                        if c.uuid == Characteristics_UUID.lower())
+                    try:
+                        # Nordic_UART_RX.read_value()
+                        Hrate_Characteristics.enable_notifications()
+                        print("%s 节点建立完成",Hrate_Characteristics)
+                    except StopIteration:
+                        pass
+                except StopIteration:
+                    pass
+            except StopIteration:
+                pass
+        print("全部节点建立完成")
+
 
         # try:
         #     Nordic_UART_Service = next(
@@ -141,23 +177,23 @@ class AnyDevice(gatt.Device):
 
 
 
-        try:
-            Hrate_Service = next(
-                s for s in self.services
-                if s.uuid == '0000180d-0000-1000-8000-00805f9b34fb'.lower())
-
-        except StopIteration:
-            pass
-        try:
-            Hrate_Characteristics = next(
-                c for c in Hrate_Service.characteristics
-                if c.uuid == '00002a37-0000-1000-8000-00805f9b34fb'.lower())
-        except StopIteration:
-            pass
-
-        # Nordic_UART_RX.read_value()
-        Hrate_Characteristics.enable_notifications()
-
+        # try:
+        #     Hrate_Service = next(
+        #         s for s in self.services
+        #         if s.uuid == Hrate_Service_UUID.lower())
+        # except StopIteration:
+        #     pass
+        # try:
+        #     Hrate_Characteristics = next(
+        #         c for c in Hrate_Service.characteristics
+        #         if c.uuid == Hrate_Characteristics_UUID.lower())
+        # except StopIteration:
+        #     pass
+        # try:
+        #     # Nordic_UART_RX.read_value()
+        #     Hrate_Characteristics.enable_notifications()
+        # except StopIteration:
+        #     pass
 
 
 
@@ -184,17 +220,17 @@ class AnyDevice(gatt.Device):
                     break
                     # print(uuid_list[Service][Characteristic])
         # print(value[1])
-        # message = value[1]
+        message = value[1]
 
-        # print("uuid:",characteristic.uuid,"\t\t\tValue：",message)
-        # main_ui.recv_textBrowser.insertPlainText("接收到的数据: "+ message[0:10] + "\n")  # 显示数据到窗口
-        # main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
+        print("uuid:",characteristic.uuid,"\t\t\tValue：",message)
+        main_ui.recv_textBrowser.insertPlainText("接收到的数据: "+ message[0:10] + "\n")  # 显示数据到窗口
+        main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
 
-        if (str(characteristic.uuid) == '00002a37-0000-1000-8000-00805f9b34fb'):
-            print(flag_value_change, characteristic.uuid,cur_time)
-            flag_value_change=True  #存在一个问题：每次值出现变化都会置1,导致不同characteristic都会唤醒，频繁变化。
-            main_window.update_treeWidget()
-
+        # if (str(characteristic.uuid) == Hrate_Characteristics_UUID):
+        #     print(flag_value_change, characteristic.uuid,cur_time)
+        #     flag_value_change=True  #存在一个问题：每次值出现变化都会置1,导致不同characteristic都会唤醒，频繁变化。
+        #     main_window.update_treeWidget()
+        main_window.update_treeWidget()
 
     def characteristic_read_value_failed(self, characteristic, error):
         print(error)
@@ -229,6 +265,7 @@ class BLE_CTL:
         """实例化蓝牙类，建立连接。"""
         self.device = AnyDevice(manager=self.ble_manager, mac_address=addr)
         self.device.connect()
+        self.ble_manager.run()
 
     def disconnect_device(self):
         """断开连接。"""
@@ -354,7 +391,7 @@ class MainWindow:
         self.timer.start(50)
         self.timer.timeout.connect(self.insert_data) #insert_data
         self.timer.timeout.connect(self.update_info_to_comboBox)
-        # self.timer.timeout.connect(self.update_treeWidget)
+        self.timer.timeout.connect(self.update_treeWidget)
 
 
     def thread_get(self):
@@ -387,8 +424,8 @@ class MainWindow:
             flag_value_change=False
             last_time =cur_time
             try:
-                heart_rate = uuid_list['0000180d-0000-1000-8000-00805f9b34fb']['00002a37-0000-1000-8000-00805f9b34fb'][1]
-                temperature = uuid_list['bbb40a00-337f-4081-9a0b-10d0f09716d3']['bbb40b00-337f-4081-9a0b-10d0f09716d3'][4:6]
+                heart_rate = uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1]
+                temperature = uuid_list[Temperature_Service_UUID][Temperature_Characteristics_UUID][4:6]
                 self.insert_to_table(cur_time, temperature, heart_rate)
                 main_ui.recv_textBrowser.insertPlainText(cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
                 main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
