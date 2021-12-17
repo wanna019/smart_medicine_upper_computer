@@ -2,8 +2,6 @@
 
 import traceback
 
-
-
 from threading import Thread
 import ctypes
 import inspect
@@ -18,8 +16,6 @@ from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as Navigati
 import matplotlib.dates as mdate
 import matplotlib.pyplot as plt
 
-
-
 import sqlite3
 
 import time
@@ -29,7 +25,6 @@ from PyQt5.QtWidgets import QTableWidgetItem
 import gatt
 
 import chardet
-
 
 Hrate_Service_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
 Hrate_Characteristics_UUID = '00002a38-0000-1000-8000-00805f9b34fb'
@@ -44,10 +39,13 @@ local_mac_address = None
 local_alias = None
 list_ble = {"name": [], "addr": []}  # 显示蓝牙设备的列表
 message = None
-Nordic_UART_TX=None
-uuid_list= {}  # 根据该字典，显示到树状图，其中存储了每一个service以及characteristic和其值。
+Nordic_UART_TX = None
+Hrate_Service = None
+Hrate_Characteristics = None
+uuid_list = {}  # 根据该字典，显示到树状图，其中存储了每一个service以及characteristic和其值。
 
-last_time=None
+last_time = None
+
 
 class AnyDeviceManager(gatt.DeviceManager):
     def device_discovered(self, device):
@@ -59,7 +57,6 @@ class AnyDeviceManager(gatt.DeviceManager):
 
 
 class AnyDevice(gatt.Device):
-
 
     def connect_succeeded(self):
         super().connect_succeeded()
@@ -73,29 +70,25 @@ class AnyDevice(gatt.Device):
         main_ui.label_confim.setText("连接失败")  # 设置label_tip的文本，用于显示连接状态
         QtWidgets.qApp.processEvents()
 
-
     def disconnect_succeeded(self):
         super().disconnect_succeeded()
         print("[%s] Disconnected" % (self.mac_address))
         main_ui.label_confim.setText("连接断开")
 
     def characteristic_enable_notifications_succeeded(self, characteristic):
-        main_ui.label_confim.setText("监听成功")
-
+        main_ui.label_confim.setText("%s:监听成功" %characteristic)
 
     def characteristic_enable_notifications_failed(self, characteristic, error):
-        main_ui.label_confim.setText("%s监听失败：%s"%characteristic %error)
-
-
+        main_ui.label_confim.setText("%s监听失败：%s" %(characteristic,error))
 
     def services_resolved(self):
         super().services_resolved()
 
         print("[%s] Resolved services" % (self.mac_address))
-        for index,service in enumerate(self.services):
+        for index, service in enumerate(self.services):
             print(index);
             print("[%s]  Service [%s]" % (self.mac_address, service.uuid))
-            uuid_list[str(service.uuid)]={}
+            uuid_list[str(service.uuid)] = {}
             try:
                 service.descriptors
             except AttributeError:
@@ -113,7 +106,8 @@ class AnyDevice(gatt.Device):
                     pass
                 else:
                     for descriptor in characteristic.descriptors:
-                        print("[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
+                        print("[%s]\t\t\tDescriptor [%s] (%s)" % (
+                        self.mac_address, descriptor.uuid, descriptor.read_value()))
 
         print("Service/Characteristic输出结束")
         # print(uuid_list)
@@ -124,31 +118,35 @@ class AnyDevice(gatt.Device):
         为每个通道建立监听
         '''
         for service in self.services:
-            Service_UUID = "'" + service.uuid + "'"
+            Service_UUID =service.uuid
             print(Service_UUID)
             for characteristic in service.characteristics:
-                Characteristics_UUID = "'" + characteristic.uuid + "'"
+                Characteristics_UUID =characteristic.uuid
                 print(Characteristics_UUID)
-            try:
-                Hrate_Service = next(
-                    s for s in self.services
-                    if s.uuid == Service_UUID.lower())
+                print(characteristic.uuid)
+                try:
+                    Hrate_Service = next(
+                        s for s in self.services
+                        if s.uuid == Service_UUID.lower())
+                    print(Hrate_Service)
+                except StopIteration:
+                    pass
+                for s in self.services:
+                    print(s.uuid)
                 try:
                     Hrate_Characteristics = next(
                         c for c in Hrate_Service.characteristics
                         if c.uuid == Characteristics_UUID.lower())
-                    try:
-                        # Nordic_UART_RX.read_value()
-                        Hrate_Characteristics.enable_notifications()
-                        print("%s 节点建立完成",Hrate_Characteristics)
-                    except StopIteration:
-                        pass
                 except StopIteration:
                     pass
-            except StopIteration:
-                pass
+                print(Hrate_Characteristics)
+                # Nordic_UART_RX.read_value()
+                try:
+                    Hrate_Characteristics.enable_notifications()
+                    print("%s 节点建立完成", Hrate_Characteristics)
+                except StopIteration:
+                    pass
         print("全部节点建立完成")
-
 
         # try:
         #     Nordic_UART_Service = next(
@@ -171,11 +169,7 @@ class AnyDevice(gatt.Device):
         # except StopIteration:
         #     pass
 
-
-
         # Nordic_UART_RX.enable_notifications()
-
-
 
         # try:
         #     Hrate_Service = next(
@@ -195,8 +189,6 @@ class AnyDevice(gatt.Device):
         # except StopIteration:
         #     pass
 
-
-
     def characteristic_value_updated(self, characteristic, value):
         # # 查看变量value的转码方式
         # ret = chardet.detect(value)
@@ -213,8 +205,8 @@ class AnyDevice(gatt.Device):
         #     print("Hrate_Service")
         #     print("\t\t", keys, "[%s]\n" % values)
         # print("uuid:",characteristic.uuid,"原始值: ", value)
-        for Service,Characteristics in uuid_list.items():
-            for Characteristic,Value in Characteristics.items():
+        for Service, Characteristics in uuid_list.items():
+            for Characteristic, Value in Characteristics.items():
                 if Characteristic == str(characteristic.uuid):
                     uuid_list[Service][Characteristic] = value
                     break
@@ -222,8 +214,8 @@ class AnyDevice(gatt.Device):
         # print(value[1])
         message = value[1]
 
-        print("uuid:",characteristic.uuid,"\t\t\tValue：",message)
-        main_ui.recv_textBrowser.insertPlainText("接收到的数据: "+ message[0:10] + "\n")  # 显示数据到窗口
+        print("uuid:", characteristic.uuid, "\t\t\tValue：", message)
+        main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + message[0:10] + "\n")  # 显示数据到窗口
         main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
 
         # if (str(characteristic.uuid) == Hrate_Characteristics_UUID):
@@ -252,14 +244,12 @@ class AnyDevice(gatt.Device):
         flag_write_failed = True
 
 
-
 class BLE_CTL:
     """读取端口信息，连接端口，关闭端口"""
+
     def __init__(self):
         self.ser = None  # 端口对象初始化
         self.ble_manager = AnyDeviceManager(adapter_name='hci0')
-
-
 
     def connect_device(self, addr):
         """实例化蓝牙类，建立连接。"""
@@ -270,7 +260,6 @@ class BLE_CTL:
     def disconnect_device(self):
         """断开连接。"""
         self.device.disconnect()
-
 
     def thread_ctl(self):
         self.ble_manager.start_discovery()
@@ -288,7 +277,6 @@ class MainWindow:
 
         self.ui_init()
         self.timer_start()
-
 
     def ui_init(self):
 
@@ -311,7 +299,6 @@ class MainWindow:
         self.tree.setHeaderLabels(['Key', 'Value'])
         self.tree.setColumnWidth(0, 150)
 
-
     def update_treeWidget(self):
         """
         更新树状图部分节点信息
@@ -332,16 +319,13 @@ class MainWindow:
             self.tree.expandAll()  # 展开全部节点
 
         if len(self.child_list.items()):  # 如果存在子节点，向对应的子节点中存储数据。
-            for Service,Characteristics in uuid_list.items():
-                for Characteristic,value in Characteristics.items():
+            for Service, Characteristics in uuid_list.items():
+                for Characteristic, value in Characteristics.items():
                     # print(Characteristic)
                     # print("child_list[str(Characteristic)=",self.child_list[str(Characteristic)])
                     # print("value=",value)
                     child = self.child_list[str(Characteristic)]
                     child.setText(1, str(value))
-
-
-
 
     def connect_to_device(self):
         main_ui.label_confim.setText("连接中")  # 设置label_tip的文本，用于确认
@@ -349,12 +333,11 @@ class MainWindow:
         QtWidgets.qApp.processEvents()
 
         com_label = main_ui.comboBox.currentText()  # 读取下拉菜单此时显示的字符串
-        addr_index=list_ble['name'].index(com_label)
-        addr=list_ble["addr"][addr_index]
-        connect_thread=Thread(target=self.ble.connect_device(addr))
+        addr_index = list_ble['name'].index(com_label)
+        addr = list_ble["addr"][addr_index]
+        connect_thread = Thread(target=self.ble.connect_device(addr))
         connect_thread.start()
         # stop_thread(connect_thread)
-
 
     def clear_device_list(self):
         list_ble["addr"].clear()
@@ -366,21 +349,20 @@ class MainWindow:
     def update_info_to_comboBox(self):
         """update info to comboBox"""
         cur_time = self.showTime()
-        comoBox_list=[]
+        comoBox_list = []
         for i in range(main_ui.comboBox.count()):
             comoBox_list.append(main_ui.comboBox.itemText(i))
-        if list_ble['name'] != comoBox_list :
+        if list_ble['name'] != comoBox_list:
             main_ui.comboBox.clear()
             main_ui.comboBox.addItems(list_ble['name'])  # 将获得的端口信息添加到下拉菜单。
-
 
     def send_func(self):
         send_str = main_ui.sendTextEdit.toPlainText()
         if "\n" in send_str:
-            send_value=int(send_str[:-1])
-            send_buf=[]
+            send_value = int(send_str[:-1])
+            send_buf = []
             send_buf.append(send_value)
-            send_value=bytes(send_buf)
+            send_value = bytes(send_buf)
             if Nordic_UART_TX:
                 Nordic_UART_TX.write_value(send_value)
             # self.com.ser.write(('%s' % send_str).encode('utf-8'))  # 如果有换行符，则发送数据
@@ -389,10 +371,9 @@ class MainWindow:
     def timer_start(self):
         self.timer = QTimer()
         self.timer.start(50)
-        self.timer.timeout.connect(self.insert_data) #insert_data
+        self.timer.timeout.connect(self.insert_data)  # insert_data
         self.timer.timeout.connect(self.update_info_to_comboBox)
         self.timer.timeout.connect(self.update_treeWidget)
-
 
     def thread_get(self):
         conn = sqlite3.connect('recv_data.db')
@@ -405,14 +386,12 @@ class MainWindow:
                     TEMPERATURE FLOAT NOT NULL,
                     HEART_RATE INTEGER NOT NULL);''')
             print("Table created/opened successfully")
-        except :
+        except:
             print("Create/opened table failed")
             return False
         conn.commit()
         conn.close()
         self.show_table()
-
-
 
     def insert_data(self):
         # self.show_table()
@@ -420,14 +399,15 @@ class MainWindow:
         global last_time
         cur_time = self.showTime()
 
-        if flag_value_change&(cur_time!=last_time):
-            flag_value_change=False
-            last_time =cur_time
+        if flag_value_change & (cur_time != last_time):
+            flag_value_change = False
+            last_time = cur_time
             try:
                 heart_rate = uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1]
                 temperature = uuid_list[Temperature_Service_UUID][Temperature_Characteristics_UUID][4:6]
                 self.insert_to_table(cur_time, temperature, heart_rate)
-                main_ui.recv_textBrowser.insertPlainText(cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
+                main_ui.recv_textBrowser.insertPlainText(
+                    cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
                 main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
                 self.draw_plot(temperature_array, heart_rate_array, cur_time[-8:], temperature, heart_rate)
 
@@ -435,7 +415,7 @@ class MainWindow:
             except Exception as e:
                 print(traceback.print_exc())
 
-    def insert_to_table(self,cur_time, temperature, heart_rate):
+    def insert_to_table(self, cur_time, temperature, heart_rate):
         conn = sqlite3.connect('recv_data.db')  # 打开数据库
         c = conn.cursor()  # 创建光标
         c.execute("SELECT COUNT(*) FROM DATA")  # 获取DATA表中的行数
@@ -513,7 +493,6 @@ class MainWindow:
             time_array.pop(0)
             time_array.append(cur_time)
 
-
     def draw_plot(self, plot_array1, plot_array2, cur_time, data1, data2):
         """绘制曲线"""
         p = main_ui.mplwidget.canvas  # 画布
@@ -523,13 +502,10 @@ class MainWindow:
 
         p.draw()
 
-
-
-
     def draw_canvas(self, axes, plot_array, title, x_label, y_label, y_lim_min, y_lim_max):
         axes.clear()
         # nozero_plot_array = plot_array.ravel()[np.flatnonzero(plot_array)]  # 提取出非零元素
-        axes.plot(time_array,plot_array, ":ob", label=title)  # pg.mkPen线条颜色
+        axes.plot(time_array, plot_array, ":ob", label=title)  # pg.mkPen线条颜色
         axes.legend(loc="upper right")  # 标签位置
         axes.set_title(title + "实时折线图", fontsize=12)
         axes.set_xlabel(x_label, fontsize=10)
@@ -545,7 +521,6 @@ class MainWindow:
         for label in axes.xaxis.get_ticklabels():
             label.set_rotation(45)
         # matplotlib.rcParams['font.sans-serif'] = ['KaiTi']
-
 
 
 if __name__ == "__main__":
@@ -570,11 +545,6 @@ if __name__ == "__main__":
 
     thread_get = Thread(target=main_window.thread_get)
     thread_get.start()
-
-
-
-
-
 
     main_ui.show()
     app.exec_()
