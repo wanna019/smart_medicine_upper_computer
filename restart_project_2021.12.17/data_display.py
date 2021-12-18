@@ -27,7 +27,7 @@ import gatt
 import chardet
 
 Hrate_Service_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
-Hrate_Characteristics_UUID = '00002a38-0000-1000-8000-00805f9b34fb'
+Hrate_Characteristics_UUID = '00002a37-0000-1000-8000-00805f9b34fb'
 Temperature_Service_UUID = 'bbb40a00-337f-4081-9a0b-10d0f09716d3'
 Temperature_Characteristics_UUID = 'bbb40b00-337f-4081-9a0b-10d0f09716d3'
 
@@ -119,11 +119,11 @@ class AnyDevice(gatt.Device):
         '''
         for service in self.services:
             Service_UUID =service.uuid
-            print(Service_UUID)
+            # print(Service_UUID)
             for characteristic in service.characteristics:
                 Characteristics_UUID =characteristic.uuid
-                print(Characteristics_UUID)
-                print(characteristic.uuid)
+                # print(Characteristics_UUID)
+                # print(characteristic.uuid)
                 try:
                     Hrate_Service = next(
                         s for s in self.services
@@ -131,8 +131,8 @@ class AnyDevice(gatt.Device):
                     print(Hrate_Service)
                 except StopIteration:
                     pass
-                for s in self.services:
-                    print(s.uuid)
+                # for s in self.services:
+                #     print(s.uuid)
                 try:
                     Hrate_Characteristics = next(
                         c for c in Hrate_Service.characteristics
@@ -201,7 +201,7 @@ class AnyDevice(gatt.Device):
         # print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
         # global message
         global flag_value_change
-        # for keys,values in uuid_list["Hrate_Service"].items():
+        # for keys,values in uuid_list.items():
         #     print("Hrate_Service")
         #     print("\t\t", keys, "[%s]\n" % values)
         # print("uuid:",characteristic.uuid,"原始值: ", value)
@@ -209,20 +209,38 @@ class AnyDevice(gatt.Device):
             for Characteristic, Value in Characteristics.items():
                 if Characteristic == str(characteristic.uuid):
                     uuid_list[Service][Characteristic] = value
+                    # print('uuid_list[%s][%s]'%(Service,Characteristic),uuid_list[Service][Characteristic])
                     break
-                    # print(uuid_list[Service][Characteristic])
-        # print(value[1])
-        message = value[1]
+        # for keys, values in uuid_list.items():
+        #     print("Hrate_Service")
+        #     print("\t\t", keys, "[%s]\n" % values)
+        #             print(uuid_list[Service][Characteristic])
+        # print("value=",value)
+        # for i,num in enumerate(value):
+        #     print("value[%d]="%i,value[i])
+        # message = value[1]
 
-        print("uuid:", characteristic.uuid, "\t\t\tValue：", message)
-        main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + message[0:10] + "\n")  # 显示数据到窗口
+        print("uuid:", characteristic.uuid, "\t\t\tValue：", value)
+        # main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + message[0:10] + "\n")  # 显示数据到窗口、
+        # main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + str(value) + "\n")  # 显示数据到窗口
         main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
+        if(value is not None):
+            flag_value_change = True
+            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID])
+            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0]]=",
+                  uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0])
+            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[1]]=",
+                  uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1])
+            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0:1]]=",
+                  uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0:1])
+            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[1:2]]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1:2])
+            main_window.update_treeWidget()
 
         # if (str(characteristic.uuid) == Hrate_Characteristics_UUID):
         #     print(flag_value_change, characteristic.uuid,cur_time)
         #     flag_value_change=True  #存在一个问题：每次值出现变化都会置1,导致不同characteristic都会唤醒，频繁变化。
         #     main_window.update_treeWidget()
-        main_window.update_treeWidget()
+
 
     def characteristic_read_value_failed(self, characteristic, error):
         print(error)
@@ -321,8 +339,7 @@ class MainWindow:
         if len(self.child_list.items()):  # 如果存在子节点，向对应的子节点中存储数据。
             for Service, Characteristics in uuid_list.items():
                 for Characteristic, value in Characteristics.items():
-                    # print(Characteristic)
-                    # print("child_list[str(Characteristic)=",self.child_list[str(Characteristic)])
+                    # print("child_list[%s]="%Characteristic,self.child_list[str(Characteristic)])
                     # print("value=",value)
                     child = self.child_list[str(Characteristic)]
                     child.setText(1, str(value))
@@ -373,7 +390,7 @@ class MainWindow:
         self.timer.start(50)
         self.timer.timeout.connect(self.insert_data)  # insert_data
         self.timer.timeout.connect(self.update_info_to_comboBox)
-        self.timer.timeout.connect(self.update_treeWidget)
+        # self.timer.timeout.connect(self.update_treeWidget)
 
     def thread_get(self):
         conn = sqlite3.connect('recv_data.db')
@@ -403,8 +420,9 @@ class MainWindow:
             flag_value_change = False
             last_time = cur_time
             try:
-                heart_rate = uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1]
-                temperature = uuid_list[Temperature_Service_UUID][Temperature_Characteristics_UUID][4:6]
+                heart_rate = uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0]
+                temperature = 0
+                # temperature = uuid_list[Temperature_Service_UUID][Temperature_Characteristics_UUID][4:6]
                 self.insert_to_table(cur_time, temperature, heart_rate)
                 main_ui.recv_textBrowser.insertPlainText(
                     cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
