@@ -76,10 +76,10 @@ class AnyDevice(gatt.Device):
         main_ui.label_confim.setText("连接断开")
 
     def characteristic_enable_notifications_succeeded(self, characteristic):
-        main_ui.label_confim.setText("%s:监听成功" %characteristic)
+        main_ui.label_confim.setText("%s:监听成功" % characteristic)
 
     def characteristic_enable_notifications_failed(self, characteristic, error):
-        main_ui.label_confim.setText("%s监听失败：%s" %(characteristic,error))
+        main_ui.label_confim.setText("%s监听失败：%s" % (characteristic, error))
 
     def services_resolved(self):
         super().services_resolved()
@@ -87,16 +87,32 @@ class AnyDevice(gatt.Device):
         print("[%s] Resolved services" % (self.mac_address))
         for index, service in enumerate(self.services):
             print(index);
-            print("[%s]  Service [%s]" % (self.mac_address, service.uuid))
+            # 显示Service的相关信息。
+            # print("service.device:", service.device)
+            # print("service.uuid:", service.uuid)
+            # print("service._bus:", service._bus)
+            # print("service._path:", service._path)
+            # print("service._object_manager:", service._object_manager)
+            # print("service._object:",service._object)
+            # print("[%s]  Service [%s]\n\n" % (self.mac_address, service.uuid))
             uuid_list[str(service.uuid)] = {}
+            ##########################################修改前##############################
+            # try:
+            #     service.descriptors
+            # except AttributeError:
+            #     pass
+            # else:
+            #     for descriptor in service.descriptors:
+            #         print(
+            #             "[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
+            ##########################################修改后##############################
             try:
-                service.descriptors
-            except AttributeError:
-                pass
-            else:
                 for descriptor in service.descriptors:
                     print(
                         "[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
+            except AttributeError:
+                pass
+            #############################################################################
             for characteristic in service.characteristics:
                 print("[%s]    Characteristic [%s]" % (self.mac_address, characteristic.uuid))
                 uuid_list[str(service.uuid)][str(characteristic.uuid)] = None
@@ -106,8 +122,9 @@ class AnyDevice(gatt.Device):
                     pass
                 else:
                     for descriptor in characteristic.descriptors:
+                        # print(descriptor.read_value())
                         print("[%s]\t\t\tDescriptor [%s] (%s)" % (
-                        self.mac_address, descriptor.uuid, descriptor.read_value()))
+                            self.mac_address, descriptor.uuid, descriptor.read_value()))
 
         print("Service/Characteristic输出结束")
         # print(uuid_list)
@@ -118,17 +135,17 @@ class AnyDevice(gatt.Device):
         为每个通道建立监听
         '''
         for service in self.services:
-            Service_UUID =service.uuid
+            Service_UUID = service.uuid
             # print(Service_UUID)
             for characteristic in service.characteristics:
-                Characteristics_UUID =characteristic.uuid
+                Characteristics_UUID = characteristic.uuid
                 # print(Characteristics_UUID)
                 # print(characteristic.uuid)
                 try:
                     Hrate_Service = next(
                         s for s in self.services
                         if s.uuid == Service_UUID.lower())
-                    print(Hrate_Service)
+                    # print(Hrate_Service)
                 except StopIteration:
                     pass
                 # for s in self.services:
@@ -139,11 +156,12 @@ class AnyDevice(gatt.Device):
                         if c.uuid == Characteristics_UUID.lower())
                 except StopIteration:
                     pass
-                print(Hrate_Characteristics)
+                # print(Hrate_Characteristics)
                 # Nordic_UART_RX.read_value()
                 try:
                     Hrate_Characteristics.enable_notifications()
-                    print("%s 节点建立完成", Hrate_Characteristics)
+
+                    print("%s 节点建立完成" % Hrate_Characteristics.uuid)
                 except StopIteration:
                     pass
         print("全部节点建立完成")
@@ -206,6 +224,8 @@ class AnyDevice(gatt.Device):
         #     print("\t\t", keys, "[%s]\n" % values)
         # print("uuid:",characteristic.uuid,"原始值: ", value)
         for Service, Characteristics in uuid_list.items():
+            if Service == str(characteristic.uuid):
+                print("Service[%s] = %s" % (Service, value))
             for Characteristic, Value in Characteristics.items():
                 if Characteristic == str(characteristic.uuid):
                     uuid_list[Service][Characteristic] = value
@@ -221,26 +241,28 @@ class AnyDevice(gatt.Device):
         # message = value[1]
 
         print("uuid:", characteristic.uuid, "\t\t\tValue：", value)
+        for index,num in enumerate(value):
+            print("\t\t\tValue[%d]："%index, value[index])
+        print("\n")
         # main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + message[0:10] + "\n")  # 显示数据到窗口、
         # main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + str(value) + "\n")  # 显示数据到窗口
         main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
-        if(value is not None):
-            flag_value_change = True
-            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID])
-            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0]]=",
-                  uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0])
-            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[1]]=",
-                  uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1])
-            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0:1]]=",
-                  uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0:1])
-            print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[1:2]]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1:2])
+        if (value is not None):
+            # flag_value_change = True
+            # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID])
+            # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0]]=",
+            #       uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0])
+            # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[1]]=",
+            #       uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1])
+            # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0:1]]=",
+            #       uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0:1])
+            # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[1:2]]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1:2])
             main_window.update_treeWidget()
 
         # if (str(characteristic.uuid) == Hrate_Characteristics_UUID):
         #     print(flag_value_change, characteristic.uuid,cur_time)
         #     flag_value_change=True  #存在一个问题：每次值出现变化都会置1,导致不同characteristic都会唤醒，频繁变化。
         #     main_window.update_treeWidget()
-
 
     def characteristic_read_value_failed(self, characteristic, error):
         print(error)
