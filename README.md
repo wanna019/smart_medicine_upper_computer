@@ -33,3 +33,43 @@
 |6|0x01|
 |7|rr_val|
 |8|0x01|
+
+
+##2021.12.20
+###完成
+1. 修改时间毫秒级显示，
+###bug
+1. 板子增加数据传输频率后，断开连接按钮失灵
+2. 板子设置频率为50Hz，但是数据接收仅3Hz（可能是板载蓝牙发送数据的频率问题，后续发送数据形式会变成每过一段时间发送一段数据，到时再处理后续部分）
+###下一步计划
+1. 修复下拉栏更新数据后重置的bug
+2. 修改ble部分，combox显示
+###小笔记
+####获取毫秒级时间戳
+以下部分参考https://www.jb51.net/article/210276.htm
+```python
+import time
+import datetime
+  
+t = time.time()
+  
+print (t)                       #原始时间数据
+print (int(t))                  #秒级时间戳
+print (int(round(t * 1000)))    #毫秒级时间戳
+print (int(round(t * 1000000))) #微秒级时间戳
+```
+####获取当前日期时间
+```python
+dt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+dt_ms = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # 含微秒的日期时间，来源 比特量化
+print(dt)
+print(dt_ms)
+```
+####QT获取毫秒级时间
+```python
+ # 获取系统当前时间
+        current_time = QDateTime.currentDateTime()
+        # 设置系统时间的显示格式
+        timeDisplay = current_time.toString('yyyy-MM-dd ddd hh:mm:ss.zzz')
+```
+显示格式为：年-月-日 周几 时:分:秒.毫秒

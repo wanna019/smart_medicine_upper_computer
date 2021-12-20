@@ -32,7 +32,6 @@ Temperature_Service_UUID = 'bbb40a00-337f-4081-9a0b-10d0f09716d3'
 Temperature_Characteristics_UUID = 'bbb40b00-337f-4081-9a0b-10d0f09716d3'
 
 plot_i = 0
-ptr1 = 0
 time_index_min = 0
 time_index_max = 0
 local_mac_address = None
@@ -49,11 +48,27 @@ last_time = None
 
 class AnyDeviceManager(gatt.DeviceManager):
     def device_discovered(self, device):
+        #########################################修改前########################################
         if (device.alias() is not None) & (str(device.mac_address)[0:2] != str(device.alias().lower())[0:2]):
             if device.mac_address not in list_ble["addr"]:
                 print("Discovered [%s] %s" % (device.mac_address, device.alias()))
-                list_ble["addr"].append(device.mac_address)
-                list_ble["name"].append(device.alias())
+        #         list_ble["addr"].append(device.mac_address)
+        #         list_ble["name"].append(device.alias())
+        #########################################修改后#######################################
+        # print("devices", [i.alias() for i in self.devices() if ((i.alias() is not None)& (str(i.mac_address)[0:2] != str(i.alias().lower())[0:2]))])
+        # print("\n")
+        # print("Discovered [%s] %s" % (device.mac_address, device.alias()))
+        ######################################################################################
+
+    def update_devices_list(self):
+        list_ble["addr"].clear()
+        list_ble["name"].clear()
+        for i in self.devices():
+            if ((i.alias() is not None) & (str(i.mac_address)[0:2] != str(i.alias().lower())[0:2])):
+                list_ble["addr"].append(i.mac_address)
+                list_ble["name"].append(i.alias())
+        print("devices", [i.alias() for i in self.devices() if ((i.alias() is not None) & (str(i.mac_address)[0:2] != str(i.alias().lower())[0:2]))])
+        print("\n")
 
 
 class AnyDevice(gatt.Device):
@@ -106,25 +121,27 @@ class AnyDevice(gatt.Device):
             #         print(
             #             "[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
             ##########################################修改后##############################
-            try:
-                for descriptor in service.descriptors:
-                    print(
-                        "[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
-            except AttributeError:
-                pass
+            ##############查看descriptor
+            # try:
+            #     for descriptor in service.descriptors:
+            #         print(
+            #             "[%s]\t\t\tDescriptor [%s] (%s)" % (self.mac_address, descriptor.uuid, descriptor.read_value()))
+            # except AttributeError:
+            #     pass
             #############################################################################
             for characteristic in service.characteristics:
                 print("[%s]    Characteristic [%s]" % (self.mac_address, characteristic.uuid))
                 uuid_list[str(service.uuid)][str(characteristic.uuid)] = None
-                try:
-                    characteristic.descriptors
-                except AttributeError:
-                    pass
-                else:
-                    for descriptor in characteristic.descriptors:
-                        # print(descriptor.read_value())
-                        print("[%s]\t\t\tDescriptor [%s] (%s)" % (
-                            self.mac_address, descriptor.uuid, descriptor.read_value()))
+                #####查看descriptors
+                # try:
+                #     characteristic.descriptors
+                # except AttributeError:
+                #     pass
+                # else:
+                #     for descriptor in characteristic.descriptors:
+                #         # print(descriptor.read_value())
+                #         print("[%s]\t\t\tDescriptor [%s] (%s)" % (
+                #             self.mac_address, descriptor.uuid, descriptor.read_value()))
 
         print("Service/Characteristic输出结束")
         # print(uuid_list)
@@ -240,15 +257,18 @@ class AnyDevice(gatt.Device):
         #     print("value[%d]="%i,value[i])
         # message = value[1]
 
-        print("uuid:", characteristic.uuid, "\t\t\tValue：", value)
-        for index,num in enumerate(value):
-            print("\t\t\tValue[%d]："%index, value[index])
-        print("\n")
+        #############################调试#########################################
+        ####显示接收的数据
+        # print("uuid:", characteristic.uuid, "\t\t\tValue：", value)
+        # for index,num in enumerate(value):
+        #     print("\t\t\tValue[%d]："%index, value[index])
+        # print("\n")
+        ###########################################################################
         # main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + message[0:10] + "\n")  # 显示数据到窗口、
         # main_ui.recv_textBrowser.insertPlainText("接收到的数据: " + str(value) + "\n")  # 显示数据到窗口
-        main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
+        # main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
         if (value is not None):
-            # flag_value_change = True
+            flag_value_change = True  # 打开波形图与数据库更新的标志
             # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID]=",uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID])
             # print("uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID[0]]=",
             #       uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0])
@@ -379,8 +399,11 @@ class MainWindow:
         # stop_thread(connect_thread)
 
     def clear_device_list(self):
-        list_ble["addr"].clear()
-        list_ble["name"].clear()
+        ######################################修改前################################
+        # list_ble["addr"].clear()
+        # list_ble["name"].clear()
+        ######################################after################################
+        self.ble.ble_manager.update_devices_list()
 
     def disconnect_to_device(self):
         self.ble.disconnect_device()
@@ -392,8 +415,15 @@ class MainWindow:
         for i in range(main_ui.comboBox.count()):
             comoBox_list.append(main_ui.comboBox.itemText(i))
         if list_ble['name'] != comoBox_list:
+            com_label = main_ui.comboBox.currentText()
             main_ui.comboBox.clear()
+            # print("list_ble['name']=",list_ble['name'])
+            # print("comoBox_list = ",comoBox_list)
             main_ui.comboBox.addItems(list_ble['name'])  # 将获得的端口信息添加到下拉菜单。
+            if com_label != '':
+                index = comoBox_list.index(com_label)
+                main_ui.comboBox.setCurrentIndex(index)
+            comoBox_list.clear()
 
     def send_func(self):
         send_str = main_ui.sendTextEdit.toPlainText()
@@ -413,6 +443,13 @@ class MainWindow:
         self.timer.timeout.connect(self.insert_data)  # insert_data
         self.timer.timeout.connect(self.update_info_to_comboBox)
         # self.timer.timeout.connect(self.update_treeWidget)
+        # self.timer.timeout.connect(self.judge_connect)
+
+    # def judge_connect(self):
+    #     try:
+    #         print("is_connected_______:", self.ble.device.is_connected())
+    #     except:
+    #         pass
 
     def thread_get(self):
         conn = sqlite3.connect('recv_data.db')
@@ -442,14 +479,14 @@ class MainWindow:
             flag_value_change = False
             last_time = cur_time
             try:
-                heart_rate = uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][0]
+                heart_rate = uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][1] + uuid_list[Hrate_Service_UUID][Hrate_Characteristics_UUID][2]*256
                 temperature = 0
                 # temperature = uuid_list[Temperature_Service_UUID][Temperature_Characteristics_UUID][4:6]
                 self.insert_to_table(cur_time, temperature, heart_rate)
                 main_ui.recv_textBrowser.insertPlainText(
                     cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
                 main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
-                self.draw_plot(temperature_array, heart_rate_array, cur_time[-8:], temperature, heart_rate)
+                self.draw_plot(temperature_array, heart_rate_array, cur_time[-12:], temperature, heart_rate)
 
                 # print(temperature_array)
             except Exception as e:
@@ -473,7 +510,7 @@ class MainWindow:
         # 获取系统当前时间
         current_time = QDateTime.currentDateTime()
         # 设置系统时间的显示格式
-        timeDisplay = current_time.toString('yyyy-MM-dd hh:mm:ss')
+        timeDisplay = current_time.toString('yyyy-MM-dd ddd hh:mm:ss.zzz')
         # 在标签上显示时间
         main_ui.label_tip.setText(timeDisplay)
         return timeDisplay
@@ -517,8 +554,7 @@ class MainWindow:
         p.axes1.set_title("体温/心率实时折线图", fontsize=12)
 
     def update_Data(self, array1, array2, cur_time, data1, data2):
-        global plot_i, ptr1, time_index_min, time_index_max  # time_index用于横坐标
-        ptr1 += 1
+        global plot_i, time_index_min, time_index_max  # time_index用于横坐标
         if plot_i < historyLength:
             array1.append(float(data1))
             array2.append(float(data2))
@@ -538,8 +574,8 @@ class MainWindow:
         p = main_ui.mplwidget.canvas  # 画布
         self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
         self.draw_canvas(p.axes1, plot_array1, "体温", "时间", "温度", 30, 40)
-        self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 200)
-
+        self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 300)
+        # self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率")
         p.draw()
 
     def draw_canvas(self, axes, plot_array, title, x_label, y_label, y_lim_min, y_lim_max):
