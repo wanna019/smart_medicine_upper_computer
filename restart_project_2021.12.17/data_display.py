@@ -15,6 +15,7 @@ from PyQt5.uic import loadUi
 from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
 import matplotlib.dates as mdate
 import matplotlib.pyplot as plt
+import pyqtgraph as pg
 
 import sqlite3
 
@@ -77,7 +78,7 @@ class AnyDevice(gatt.Device):
         super().connect_succeeded()
         print("[%s] Connected" % (self.mac_address))
         main_ui.label_confim.setText("连接成功")  # 设置label_tip的文本，用于显示连接状态
-        main_ui.ble.ble_manager.stop()
+        # main_window.ble.ble_manager.stop() # 加入后连接成功后无接下去的动作，使用错误
         QtWidgets.qApp.processEvents()
 
     def connect_failed(self, error):
@@ -248,9 +249,10 @@ class AnyDevice(gatt.Device):
         #     print("\t\t", keys, "[%s]\n" % values)
         # print("uuid:",characteristic.uuid,"原始值: ", value)
         for Service, Characteristics in uuid_list.items():
-            if Service == str(characteristic.uuid):
-                print("Service[%s] = %s" % (Service, value))
+            # if Service == str(characteristic.uuid):
+            # print("Service[%s] ------ Characteristics[%s]" % (Service, Characteristics))
             for Characteristic, Value in Characteristics.items():
+                # print(Characteristic,"\t\t\t\t\t\t\t",Value)
                 if Characteristic == str(characteristic.uuid):
                     uuid_list[Service][Characteristic] = value
                     print(value[2]*255+value[1])
@@ -447,7 +449,7 @@ class MainWindow:
 
     def timer_start(self):
         self.timer = QTimer()
-        self.timer.start(50)
+        self.timer.start(20)
         self.timer.timeout.connect(self.insert_data)  # insert_data
         self.timer.timeout.connect(self.update_info_to_comboBox)
         # self.timer.timeout.connect(self.update_treeWidget)
@@ -494,7 +496,8 @@ class MainWindow:
                 main_ui.recv_textBrowser.insertPlainText(
                     cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
                 main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
-                self.draw_plot(temperature_array, heart_rate_array, cur_time[-12:], temperature, heart_rate)
+                ################################画图#####################################################
+                # self.draw_plot(temperature_array, heart_rate_array, cur_time[-12:], temperature, heart_rate)
 
                 # print(temperature_array)
             except Exception as e:
@@ -552,6 +555,7 @@ class MainWindow:
         main_ui.tableWidget.setItem(row, 3, QTableWidgetItem(str(table_heart_rate)))
 
     def init_plot(self):
+        ########################################修改前#####################################
         p = main_ui.mplwidget.canvas
         # p.showGrid(x=True, y=True)  # 把X和Y的表格打开
         # p.setRange(yRange=[34, 40], padding=0)
@@ -560,6 +564,14 @@ class MainWindow:
         # p.setBackground('w')
         # p.setTitle('体温实时折线图', color='008080', size='12pt')  # 表格的名字
         p.axes1.set_title("体温/心率实时折线图", fontsize=12)
+        # #####################################修改后########################################
+        # # 绘图对象
+        # pg.setConfigOptions(antialias=True)
+        # self.plotWidget = pg.PlotWidget()
+        # self.plotWidget.showGrid(x=True, y=True, alpha=0.5)
+        # self.plotWidget.addLegend()
+        # # self.controlPlotWidget = ControlPlotPanel(controllerPlotWidget=self)
+        ###################################################################################
 
     def update_Data(self, array1, array2, cur_time, data1, data2):
         global plot_i, time_index_min, time_index_max  # time_index用于横坐标
@@ -579,12 +591,17 @@ class MainWindow:
 
     def draw_plot(self, plot_array1, plot_array2, cur_time, data1, data2):
         """绘制曲线"""
+        ########################################修改前#####################################
         p = main_ui.mplwidget.canvas  # 画布
         self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
         self.draw_canvas(p.axes1, plot_array1, "体温", "时间", "温度", 30, 40)
         self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 1100)
         # self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率")
         p.draw()
+        ########################################修改后####################################
+        # self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
+        # self.plotWidget.plot(plot_array2)
+        #################################################################################
 
     def draw_canvas(self, axes, plot_array, title, x_label, y_label, y_lim_min, y_lim_max):
         axes.clear()
