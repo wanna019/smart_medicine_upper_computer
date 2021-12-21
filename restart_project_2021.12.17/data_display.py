@@ -77,6 +77,7 @@ class AnyDevice(gatt.Device):
         super().connect_succeeded()
         print("[%s] Connected" % (self.mac_address))
         main_ui.label_confim.setText("连接成功")  # 设置label_tip的文本，用于显示连接状态
+        main_ui.ble.ble_manager.stop()
         QtWidgets.qApp.processEvents()
 
     def connect_failed(self, error):
@@ -177,10 +178,14 @@ class AnyDevice(gatt.Device):
                 # Nordic_UART_RX.read_value()
                 try:
                     Hrate_Characteristics.enable_notifications()
-
                     print("%s 节点建立完成" % Hrate_Characteristics.uuid)
                 except StopIteration:
                     pass
+                try:
+                    Hrate_Characteristics.read_value()
+                except StopIteration:
+                    pass
+
         print("全部节点建立完成")
 
         # try:
@@ -232,10 +237,12 @@ class AnyDevice(gatt.Device):
         # print("type=",end='')
         # # 查看变量的type
         # print(type(value))
-        cur_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        # cur_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         # print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
         # global message
         global flag_value_change
+        if(value == None):
+            return
         # for keys,values in uuid_list.items():
         #     print("Hrate_Service")
         #     print("\t\t", keys, "[%s]\n" % values)
@@ -246,6 +253,7 @@ class AnyDevice(gatt.Device):
             for Characteristic, Value in Characteristics.items():
                 if Characteristic == str(characteristic.uuid):
                     uuid_list[Service][Characteristic] = value
+                    print(value[2]*255+value[1])
                     # print('uuid_list[%s][%s]'%(Service,Characteristic),uuid_list[Service][Characteristic])
                     break
         # for keys, values in uuid_list.items():
@@ -574,7 +582,7 @@ class MainWindow:
         p = main_ui.mplwidget.canvas  # 画布
         self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
         self.draw_canvas(p.axes1, plot_array1, "体温", "时间", "温度", 30, 40)
-        self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 300)
+        self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 1100)
         # self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率")
         p.draw()
 
