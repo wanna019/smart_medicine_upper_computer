@@ -12,10 +12,14 @@ from PyQt5.QtCore import QTimer, QDateTime
 from PyQt5 import uic
 from PyQt5.uic import loadUi
 
-from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
-import matplotlib.dates as mdate
-import matplotlib.pyplot as plt
+# from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
+# import matplotlib.dates as mdate
+# import matplotlib.pyplot as plt
 import pyqtgraph as pg
+from pyqtgraph.Qt import QtGui, QtCore
+
+import pyqtgraph as pg
+import numpy as np
 
 import sqlite3
 
@@ -25,7 +29,7 @@ from PyQt5.QtWidgets import QTableWidgetItem
 
 import gatt
 
-import chardet
+# import chardet
 
 Hrate_Service_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
 Hrate_Characteristics_UUID = '00002a37-0000-1000-8000-00805f9b34fb'
@@ -247,7 +251,7 @@ class AnyDevice(gatt.Device):
         # for keys,values in uuid_list.items():
         #     print("Hrate_Service")
         #     print("\t\t", keys, "[%s]\n" % values)
-        # print("uuid:",characteristic.uuid,"原始值: ", value)
+        print("uuid:",characteristic.uuid,"原始值: ", value)
         for Service, Characteristics in uuid_list.items():
             # if Service == str(characteristic.uuid):
             # print("Service[%s] ------ Characteristics[%s]" % (Service, Characteristics))
@@ -341,7 +345,7 @@ class MainWindow:
         self.roll_i = 0
         self.insert_i = 0
         global main_ui
-        main_ui = uic.loadUi('2021.7.1_MainWindow_matplotlib.ui')  # 动态读取ui文件
+        main_ui = uic.loadUi('2021.12.23_MainWindow_matplotlib.ui')  # 动态读取ui文件
         self.ble = g_ble  # 创建COM实例
         self.child_list = {}  # 树状图子列名称与对象对应字典
 
@@ -449,7 +453,7 @@ class MainWindow:
 
     def timer_start(self):
         self.timer = QTimer()
-        self.timer.start(20)
+        self.timer.start(1)
         self.timer.timeout.connect(self.insert_data)  # insert_data
         self.timer.timeout.connect(self.update_info_to_comboBox)
         # self.timer.timeout.connect(self.update_treeWidget)
@@ -497,7 +501,7 @@ class MainWindow:
                     cur_time + "    温度：%s" % temperature + "    心率：%s\n" % heart_rate)  # 显示数据到窗口
                 main_ui.recv_textBrowser.ensureCursorVisible()  # 滚动屏幕到最新
                 ################################画图#####################################################
-                # self.draw_plot(temperature_array, heart_rate_array, cur_time[-12:], temperature, heart_rate)
+                self.draw_plot(temperature_array, heart_rate_array, cur_time[-12:], temperature, heart_rate)
 
                 # print(temperature_array)
             except Exception as e:
@@ -556,14 +560,14 @@ class MainWindow:
 
     def init_plot(self):
         ########################################修改前#####################################
-        p = main_ui.mplwidget.canvas
-        # p.showGrid(x=True, y=True)  # 把X和Y的表格打开
-        # p.setRange(yRange=[34, 40], padding=0)
-        # p.setLabel(axis='left', text='体温 / ℃')  # 靠左
-        # p.setLabel(axis='bottom', text='时间')
-        # p.setBackground('w')
-        # p.setTitle('体温实时折线图', color='008080', size='12pt')  # 表格的名字
-        p.axes1.set_title("体温/心率实时折线图", fontsize=12)
+        # p = main_ui.mplwidget.canvas
+        # # p.showGrid(x=True, y=True)  # 把X和Y的表格打开
+        # # p.setRange(yRange=[34, 40], padding=0)
+        # # p.setLabel(axis='left', text='体温 / ℃')  # 靠左
+        # # p.setLabel(axis='bottom', text='时间')
+        # # p.setBackground('w')
+        # # p.setTitle('体温实时折线图', color='008080', size='12pt')  # 表格的名字
+        # p.axes1.set_title("体温/心率实时折线图", fontsize=12)
         # #####################################修改后########################################
         # # 绘图对象
         # pg.setConfigOptions(antialias=True)
@@ -571,6 +575,22 @@ class MainWindow:
         # self.plotWidget.showGrid(x=True, y=True, alpha=0.5)
         # self.plotWidget.addLegend()
         # # self.controlPlotWidget = ControlPlotPanel(controllerPlotWidget=self)
+        p = main_ui.widget
+        l = QtGui.QVBoxLayout()
+        p.setLayout(l)
+        self.pw = pg.PlotWidget(name='Plot1')  ## giving the plots names allows us to link their axes together
+        l.addWidget(self.pw)
+        self.pw2 = pg.PlotWidget(name='Plot2')
+        l.addWidget(self.pw2)
+        ## Create an empty plot curve to be filled later, set its pen
+        self.p1 = self.pw.plot()
+        self.p1.setPen((200, 200, 100))
+        self.pw.setLabel('left', 'Value', units='V')
+        self.pw.setLabel('bottom', 'Time', units='s')
+        self.pw.setBackground("w")
+        self.pw.setYRange(0, 1100)
+        self.pw.setXRange(0, 200)
+
         ###################################################################################
 
     def update_Data(self, array1, array2, cur_time, data1, data2):
@@ -592,15 +612,16 @@ class MainWindow:
     def draw_plot(self, plot_array1, plot_array2, cur_time, data1, data2):
         """绘制曲线"""
         ########################################修改前#####################################
-        p = main_ui.mplwidget.canvas  # 画布
-        self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
-        self.draw_canvas(p.axes1, plot_array1, "体温", "时间", "温度", 30, 40)
-        self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 1100)
-        # self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率")
-        p.draw()
-        ########################################修改后####################################
+        # p = main_ui.mplwidget.canvas  # 画布
         # self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
+        # self.draw_canvas(p.axes1, plot_array1, "体温", "时间", "温度", 30, 40)
+        # self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率", 0, 1100)
+        # # self.draw_canvas(p.axes2, plot_array2, "心率", "时间", "心率")
+        # p.draw()
+        ########################################修改后####################################
+        self.update_Data(plot_array1, plot_array2, cur_time, data1, data2)
         # self.plotWidget.plot(plot_array2)
+        self.p1.setData(plot_array2)
         #################################################################################
 
     def draw_canvas(self, axes, plot_array, title, x_label, y_label, y_lim_min, y_lim_max):
@@ -627,7 +648,7 @@ class MainWindow:
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    historyLength = 20
+    historyLength = 200
     flag_value_change = False
     flag_Services_resolved_success = False
     flag_write_failed = False

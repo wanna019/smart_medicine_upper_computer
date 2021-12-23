@@ -82,3 +82,21 @@ print(dt_ms)
 1. 添加了蓝牙部分属性为只读的通道的读参数功能。
 ### 下一步计划
 1. 尝试修改讲数据画图方式由matplotlib转变为pyqtgraph，将在下一个版本中进行修改
+
+
+## 2021.12.22
+创建新的conda环境
+遇到的问题：
+1. No module named 'dbus'，解决方法：`conda install dbus-python`
+2. No module named 'gi',解决方法：
+
+## 2021.12.23
+放弃配置新环境，conda环境问题太多
+### 当前进展
+1. 初步完成pyqtgraph与matplotlib的替换
+### 出现的问题
+1. pyqtgraph部分待完善，包括显示方式、横纵轴等等
+2. 蓝牙接收数据出现重复的情况，会多次接收同一个数据。
+### 下一步计划
+1. 完善pyqtgraph
+2. 完善数据接收问题
